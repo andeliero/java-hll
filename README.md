@@ -3,20 +3,14 @@
 I wanted to show you this technique because it's really fascinating how 
 a simple problem can be tackled with a nifty strategy.
 
----
-
 ## The problem
 
 The **count-distinct** problem (aka *cardinality estimation problem*) is 
 the problem of finding the number of distinct elements in a data stream 
-with repeated elements. 
-
----
+with repeated elements.
 
 In general, the complexity in terms of space is Θ(D) because we need to 
-remind each unique element(D) to tell if an element is already seen. 
-
----
+remind each unique element(D) to tell if an element is already seen.
 
 In general, the complexity in terms of space is O(n) because we need to 
 remind each unique element to tell if an element is already seen.
@@ -25,55 +19,47 @@ Unfortunately, this strategy doesn’t scale with humongous cardinalities such a
 - Network Monitoring (counting unique source IP addresses)
 - Unique Visitors Tracking
 
----
-
-What if we allocate a constant amount of memory?
-![Limitless (2011)](limitless.png)
-
----
-
 ## The algorithm
 If you just need an estimation or when the number of unique elements is 
 not practical to store them in memory because of the magnitude, then you 
-can use **HyperLogLog++**. 
+can use **HyperLogLog++**.
+
 This technique allows estimating the number of unique elements with a 
-typical accuracy (standard error) of 2%, using 1.5 kB of memory (but this 
-depends on the number of registers). 
+relative percentage error of 6% ~ -4%, using 16 KB of memory (but this 
+depends on the number of registers).
 
 In the original paper and in related literature, the term "cardinality" is 
 used to mean the number of distinct elements.
 
----
-
 ## Example
 
-Down below, I'll try to give an example to explain the core idea.
-Pretend your friend likes to play with a die, he gets a new one and 
-starts to play. The day after he tells the biggest number of trailing 1s 
-he gets, let's pretend it's 3. 
+I'll try to give an example to explain the core idea.
+Pretend the person in front of you likes to play with a die, and they played the whole day.
+They tell you the biggest number of trailing 1s that they got so far is 3.
+We as observers, we won’t be able to tell the precise number of plays,
+but we can infer an approximation calculating the probability of that event.
 
 The probability of this event to happen is:
 ```
 1/6 * 1/6 * 1/6 = 1/(6^3)
 ```
 
-So the number of games is the inverse
+So the expected number of games to see that event is the inverse
 ```
 1 / (1/6 * 1/6 * 1/6)  = = 6^3
 ```
 
-So, if we translate this example into an algorithm, the game is the hash 
-function and instead of counting the number of trailing 1s. We count the 
-number of trailing 0 s, and the number of plays be seen as unique elements.
+So, if we transpose this idea into an algorithm, we get that:
+* The dice game → Hash function 
+* Trailing 1s counting → Trailing 0s counting
+* Probability of die yielding a 1 (1/6) → Probability of a bit yielding 0 (1/2)
+* The number of plays → Cardinality.
 
 This is the primitive idea of the Flajolet–Martin algorithm, and it has 
 been improved with HyperLogLog++ with a **Correction Factor**, 
 **Grouped Averaging** and **Linear Counting** for small cardinalities.
 
----
-
 ## Implementation
-The operations are:
 
 ### Data Structure
 
@@ -81,6 +67,9 @@ The operations are:
 //Initialize the array of 16 383 (2^14-1) elements
 private final byte[] registers = new byte[16384];
 ```
+
+The registers are initialized to 0, and it can be addressed with 14 bits.
+Mind that `byte` is enough to count 50 leading zeros.
 
 ### Add 
 1. Calculate 64-bit hash of the input;
@@ -97,46 +86,24 @@ private final byte[] registers = new byte[16384];
 ### Merge
 1. For every register pair of the same index retain the register with the bigger value.
 
----
-
 # Relative Percentage Error
-
----
 
 ## No Optimizations
 
 ![no_optimisations.svg](no_optimisations.svg)
 
----
-
 ## With Correction Factor
 
 ![with_correction_factor.svg](with_correction_factor.svg)
-
----
 
 ## With Linear Counting
 
 ![with_linear_counting.svg](with_linear_counting.svg)
 
----
-
-## Actual
-
 ![Error](error_plot.svg)
 
 Note at the beginning till ~40K linear counting is used, from there on 
 HLL++ is used.
-
----
-
-## Conclusion
-
-The algorithm provides a great approximation of the cardinality with 
-a relative percentage error between 6% and -4%. The complexity 
-is O(1) in terms of space and O(1) time complexity. 
-
----
 
 ## Credits
 ![Philippe Flajolet](flajolet_philippe_small.jpg)

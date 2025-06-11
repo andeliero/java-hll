@@ -18,7 +18,9 @@ public class Main {
             }
             double error = ((double)(hll.count() - i)) / i * 100;
             System.out.println(i + "," + hll.count() + "," + error);
-            System.out.flush();
+            if (i % 100 == 0) {
+                System.out.flush();
+            }
         }
     }
 
